@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DikaAi - Pro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url('https://files.catbox.moe/b8org4.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: -1;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            margin: 20px;
+        }
+        .header {
+            background-color: #3b5998;
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+        .header p {
+            margin: 5px 0 0;
+            font-size: 0.9em;
+        }
+        .chat-box {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .message-container {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+        .message {
+            padding: 12px 18px;
+            border-radius: 20px;
+            max-width: 80%;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+        .user-message-container {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        .ai-message {
+            background-color: #e9ecef;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+        .input-area {
+            display: flex;
+            padding: 10px 20px;
+            border-top: 1px solid #ddd;
+        }
+        .input-area input {
+            flex-grow: 1;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            padding: 12px 15px;
+            font-size: 1em;
+            outline: none;
+        }
+        .input-area button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 12px 20px;
+            margin-left: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .input-area button:hover {
+            background-color: #0056b3;
+        }
+        .faq-section {
+            display: none; /* FAQ disembunyikan di versi ini */
+        }
+        .music-control {
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .loading-dots {
+            display: flex;
+            gap: 5px;
+            padding: 12px 18px;
+            border-radius: 20px;
+            background-color: #e9ecef;
+        }
+        .loading-dots span {
+            width: 8px;
+            height: 8px;
+            background-color: #666;
+            border-radius: 50%;
+            animation: bounce 0.6s infinite alternate;
+        }
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-5px); }
+        }
+        /* Styling untuk markdown */
+        .ai-message p { margin: 0; }
+        .ai-message strong { font-weight: bold; }
+        .ai-message em { font-style: italic; }
+        .ai-message ul, .ai-message ol { padding-left: 20px; margin: 10px 0; }
+        .ai-message code { font-family: monospace; background-color: #f0f0f0; padding: 2px 4px; border-radius: 4px; }
+    </style>
+</head>
+<body onload="checkPassword()">
+
+    <div class="container">
+        <div class="header">
+            <h1>DikaAi</h1>
+            <p>AI Pribadimu || Hubungi: <a href="https://wa.me/6289635926932" target="_blank" style="color:white;">6289635926932</a></p>
+        </div>
+        <div class="chat-box" id="chatBox">
+            <div class="message-container ai-message-container">
+                <img src="https://files.catbox.moe/b8org4.png" class="avatar">
+                <div class="message ai-message">Halo, saya DikaAi. Apa yang bisa saya bantu?</div>
+            </div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Ketik pesan..." onkeydown="if(event.key === 'Enter') sendMessage()">
+            <button onclick="sendMessage()">Kirim</button>
+        </div>
+    </div>
+    
+    <audio id="backgroundMusic" loop>
+        <source src="https://files.catbox.moe/dwxnh0.opus" type="audio/mpeg">
+    </audio>
+
+    <script>
+        const API_KEY = "AIzaSyBkORjKTk-BhArw8tQP2brKaUXJRoHtaE4";
+        const PASSWORD = "admin";
+        
+        let conversationHistory = [];
+        
+        function checkPassword() {
+            let userPassword = prompt("Masukkan password untuk masuk:");
+            if (userPassword === PASSWORD) {
+                document.querySelector('.container').style.display = 'flex';
+                document.querySelector('body').style.display = 'flex';
+                const music = document.getElementById('backgroundMusic');
+                music.volume = 0.3;
+                music.play().catch(e => {
+                    console.log("Audio play was prevented:", e);
+                });
+            } else {
+                alert("Password salah. Akses ditolak.");
+                window.location.reload();
+            }
+        }
+        
+        async function sendMessage() {
+            const userInput = document.getElementById('userInput');
+            const userMessage = userInput.value.trim();
+            if (userMessage === "") return;
+
+            displayMessage(userMessage, 'user');
+            userInput.value = '';
+            
+            conversationHistory.push({ role: 'user', text: userMessage });
+
+            try {
+                const loadingMessage = displayLoadingIndicator();
+                const response = await fetchGeminiResponse();
+                removeLoadingIndicator(loadingMessage);
+                displayMessage(response, 'ai');
+                conversationHistory.push({ role: 'model', text: response });
+            } catch (error) {
+                console.error("Error fetching Gemini response:", error);
+                removeLoadingIndicator(document.querySelector('.loading-dots'));
+                displayMessage("Maaf, terjadi kesalahan.", 'ai');
+            }
+        }
+
+        async function fetchGeminiResponse() {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`;
+            const headers = { 'Content-Type': 'application/json' };
+            
+            const contents = conversationHistory.map(msg => ({
+                role: msg.role === 'user' ? 'user' : 'model',
+                parts: [{ text: msg.text }]
+            }));
+            
+            const data = { contents: contents };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(data)
+            });
+
+            const jsonResponse = await response.json();
+            
+            if (jsonResponse.candidates && jsonResponse.candidates.length > 0) {
+                return jsonResponse.candidates[0].content.parts[0].text;
+            } else {
+                throw new Error("Tidak ada respons yang valid dari API.");
+            }
+        }
+
+        function displayMessage(text, role) {
+            const chatBox = document.getElementById('chatBox');
+            const messageContainer = document.createElement('div');
+            messageContainer.classList.add('message-container');
+            if (role === 'user') {
+                messageContainer.classList.add('user-message-container');
+                const userAvatar = document.createElement('img');
+                userAvatar.src = 'https://files.catbox.moe/b8org4.png';
+                userAvatar.classList.add('avatar');
+                messageContainer.appendChild(userAvatar);
+            } else {
+                const aiAvatar = document.createElement('img');
+                aiAvatar.src = 'https://files.catbox.moe/b8org4.png';
+                aiAvatar.classList.add('avatar');
+                messageContainer.appendChild(aiAvatar);
+            }
+            
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', role === 'user' ? 'user-message' : 'ai-message');
+            messageElement.innerHTML = renderMarkdown(text);
+            messageContainer.appendChild(messageElement);
+            chatBox.appendChild(messageContainer);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        
+        function displayLoadingIndicator() {
+            const chatBox = document.getElementById('chatBox');
+            const loadingContainer = document.createElement('div');
+            loadingContainer.classList.add('message-container', 'ai-message-container', 'loading-dots');
+            loadingContainer.innerHTML = `
+                <img src="https://files.catbox.moe/b8org4.png" class="avatar">
+                <div class="loading-dots">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            chatBox.appendChild(loadingContainer);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return loadingContainer;
+        }
+        
+        function removeLoadingIndicator(element) {
+            if (element) {
+                element.remove();
+            }
+        }
+        
+        function renderMarkdown(text) {
+            let html = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/^- (.*)$/gm, '<li>$1</li>');
+            
+            if (html.includes('<li>')) {
+                html = `<ul>${html}</ul>`;
+            }
+            return `<p>${html}</p>`;
+        }
+        
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const music = document.getElementById('backgroundMusic');
+            music.volume = 0.3;
+            music.play().catch(e => {
+                console.log("Audio play was prevented:", e);
+            });
+        });
+    </script>
+
+</body>
+</html>
